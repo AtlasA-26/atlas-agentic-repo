@@ -1,0 +1,38 @@
+name: Daily Biotech Scrape
+
+on:
+  schedule:
+    - cron: '15 0 * * *' # 00:15 UTC (offset from midnight to avoid high-load delays)
+  workflow_dispatch: # This enables the manual "Run workflow" button
+
+permissions:
+  contents: write # CRITICAL: Gives the script permission to commit data back
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Scraper
+        run: |
+          mkdir -p data
+          python scraper.py
+
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/research_data.csv
+          # The '|| exit 0' prevents failure if no new data was found
+          git commit -m "Auto-update: New research data" || exit 0
+          git push
